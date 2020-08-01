@@ -14,11 +14,11 @@ use std::str::FromStr;
 pub fn key_command() -> App<'static, 'static> {
     App::new("key")
         .about("Some key operations, such as generating address, public key")
-        .subcommand(SubCommand::with_name("create"))
+        .subcommand(SubCommand::with_name("gen"))
         .subcommand(
-            SubCommand::with_name("from-private").arg(
-                Arg::with_name("private-key")
-                    .long("private-key")
+            SubCommand::with_name("use").arg(
+                Arg::with_name("hex")
+                    .long("hex")
                     .takes_value(true)
                     .required(true)
                     .validator(|privkey| key_validator(privkey.as_ref()).map(|_| ()))
@@ -26,9 +26,9 @@ pub fn key_command() -> App<'static, 'static> {
             ),
         )
         .subcommand(
-            SubCommand::with_name("pub-to-address").arg(
-                Arg::with_name("pubkey")
-                    .long("pubkey")
+            SubCommand::with_name("addr").arg(
+                Arg::with_name("pub")
+                    .long("pub")
                     .takes_value(true)
                     .required(true)
                     .validator(|pubkey| key_validator(&pubkey).map(|_| ()))
@@ -37,8 +37,8 @@ pub fn key_command() -> App<'static, 'static> {
         )
         .subcommand(
             SubCommand::with_name("hash").arg(
-                Arg::with_name("content")
-                    .long("content")
+                Arg::with_name("hex")
+                    .long("hex")
                     .takes_value(true)
                     .required(true)
                     .validator(|content| is_hex(content.as_str()))
@@ -83,36 +83,36 @@ pub fn key_processor(
     config: &GlobalConfig,
 ) -> Result<(), String> {
     match sub_matches.subcommand() {
-        ("create", Some(m)) => {
+        ("gen", Some(m)) => {
             let encryption = encryption(m, config);
             let key_pair = KeyPair::new(encryption);
             let is_color = !sub_matches.is_present("no-color") && config.color();
             printer.println(&key_pair, is_color);
         }
-        ("from-private", Some(m)) => {
+        ("use", Some(m)) => {
             let encryption = encryption(m, config);
-            let private_key = m.value_of("private-key").unwrap();
+            let private_key = m.value_of("hex").unwrap();
             let key_pair = KeyPair::from_str(remove_0x(private_key), encryption)?;
             let is_color = !sub_matches.is_present("no-color") && config.color();
             printer.println(&key_pair, is_color);
         }
-        ("pub-to-address", Some(m)) => {
+        ("addr", Some(m)) => {
             let encryption = encryption(m, config);
-            let pubkey = m.value_of("pubkey").unwrap();
+            let pubkey = m.value_of("pub").unwrap();
             let address = pubkey_to_address(&PubKey::from_str(remove_0x(pubkey), encryption)?);
             if printer.color() {
                 printer.println(
-                    &format!("{} 0x{:#x}", Yellow.paint("[address]:"), address),
+                    &format!("{} {:#x}", Yellow.paint("[address]:"), address),
                     true,
                 );
             } else {
-                printer.println(&format!("{} 0x{:#x}", "[address]:", address), false);
+                printer.println(&format!("{} k{:#x}", "[address]:", address), false);
             }
         }
         ("hash", Some(m)) => {
             let encryption = encryption(m, config);
             let content =
-                decode(remove_0x(m.value_of("content").unwrap())).map_err(|err| err.to_string())?;
+                decode(remove_0x(m.value_of("hex").unwrap())).map_err(|err| err.to_string())?;
             printer.println(&content.crypt_hash(encryption).lower_hex(), printer.color());
         }
         ("verification", Some(m)) => {
