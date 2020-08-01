@@ -106,7 +106,7 @@ pub fn key_processor(
                     true,
                 );
             } else {
-                printer.println(&format!("{} k{:#x}", "[address]:", address), false);
+                printer.println(&format!("{} {:#x}", "[address]:", address), false);
             }
         }
         ("hash", Some(m)) => {
